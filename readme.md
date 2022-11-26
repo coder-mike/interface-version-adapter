@@ -23,6 +23,9 @@ const view2 = version2.viewInstance(view1);
 view1.message = 'Hello';
 console.log(view1.message); // Hello
 console.log(view2.printout); // Hello
+view2.printout = 'World';
+console.log(view1.message); // World
+console.log(view2.printout); // World
 ```
 
 The more complete example is in [app.mjs](./app.mjs) and the source of the library is [lib.mjs](./lib.mjs).
