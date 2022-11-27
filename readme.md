@@ -30,9 +30,74 @@ console.log(view2.printout); // World
 
 The more complete example is in [app.mjs](./app.mjs) and the source of the library is [lib.mjs](./lib.mjs).
 
-A more detailed description of the background and thought process follows below (this was written before the toy code was written). Note that the toy implementation does not use JSON Schema or JSON Patch.
+### Tricky cases
 
-## Problem Statement
+This library deals with some of the tricky complexities, such as the following case where one field is renamed to the name of another field that is removed. Here, `fieldX` in version 1 is renamed to `fieldY` in version 2, but there was already a field name `fieldX` in version 1, which is removed in version 2, and version 2 also has its own new field called `fieldX`.
+
+![](doc/image/2022-11-28%20Field%20rename.png)
+
+```js
+const version1 = emptySchema
+  .addField('fieldX')
+  .addField('fieldY')
+
+const version2 = version1
+  .removeField('fieldY')
+  .renameField('fieldX', 'fieldY')
+  .addField('fieldX')
+
+const view1 = version1.newInstance({});
+const view2 = version2.viewInstance(view1);
+
+view1.fieldX = 'fieldXWrittenInVersion1';
+view1.fieldY = 'fieldYWrittenInVersion1';
+console.log(view1.fieldX); // fieldXWrittenInVersion1
+console.log(view1.fieldY); // fieldYWrittenInVersion1
+console.log(view2.fieldX); // undefined
+console.log(view2.fieldY); // fieldXWrittenInVersion1
+view2.fieldX = 'fieldXWrittenInVersion2';
+view2.fieldY = 'fieldYWrittenInVersion2';
+console.log(view1.fieldX); // fieldYWrittenInVersion2 <-- updated
+console.log(view1.fieldY); // fieldYWrittenInVersion1 <-- preserved
+console.log(view2.fieldX); // fieldXWrittenInVersion2
+console.log(view2.fieldY); // fieldYWrittenInVersion2
+```
+
+Note in particular that in this example, the data store has preserved the original `view1.fieldY` even when mutating the object through view 2 which does not have an equivalent of the same field, but which has a different field with a conflicting name. The same would be true in the opposite direction: if an older client writes to a newer-version data instance, the newer-version data is is preserved alongside the modifications done by the older client.
+
+The point is not that you may need to do this specifically, but that the edge cases can be tricky to reason about and it's better to have a library like this that just handles it for you and preserves as much information as possible across the different versions.
+
+### How might a library like this be used?
+
+Examples:
+
+  - A server automatically views clients request through the lens of its own latest data model, and a client can similarly view the response through the lens of its data model.
+
+  - The underlying state of the instance could be preserved in a database, and separately the schema history can be preserved in the same database, allowing all clients of the database to transparently view data objects through their own data model version, even if the object state contains information provided through data models that didn't exist at the time the database client was deployed.
+
+  - Even within a single, large codebase, if a model is shared across the whole codebase then it's difficult to make incremental changes to the data models, because you have to update all the places that use it. A library like this could be used to provide translation boundaries where different parts of the app are operating under different versions of the data model and they can seamlessly talk to each other, obviating the need for monolithic data model refactoring.
+
+  - In general, I think in a lot of cases that a library like this obviates the need for hand-crafted decoupling APIs, since it allows different parts of the system to share common and cohesive type definitions for shared entities (such as models of the domain) without suffering the problem of needing a monolithic migration to update such models.
+
+
+### What else is needed to make a library like this practical?
+
+  - Persistence - the data behind schemas and instances needs to be serializable. As noted later in this document, one such representation may be JSON Schema and JSON Patch.
+
+  - Nested structures and shared sub-schemas.
+
+  - Other schema operations beyond `addField`, `renameField` and `removeField`.
+
+  - Custom transforms at the field level and whole-object level
+
+  - Modularity and cohesion - thinking more carefully about how schemas can be defined that doesn't require one monolithic sequence of delta statements that couples all the sub-schemas together.
+
+
+# Problem Statement
+
+This section contains a more detailed description of the background and thought process. Note that this was written before the toy example library was written.
+
+-----------------
 
 This is a really common problem:
 

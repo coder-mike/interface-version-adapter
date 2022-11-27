@@ -8,9 +8,12 @@ const ledgerSymbol = Symbol('ledger');
 
 export class Schema {
   constructor (prev, migration) {
-    this.migration = migration;
     // Schemas are linked together in a doubly-linked list
     this.prev = prev;
+
+    // The "migration" is the action to take on the previous schema that brings
+    // us to this schema.
+    this.migration = migration;
   }
 
   addField(fieldName) {
@@ -19,6 +22,10 @@ export class Schema {
 
   renameField(oldName, newName) {
     return new Schema(this, { op: 'renameField', oldName, newName });
+  }
+
+  removeField(fieldName) {
+    return new Schema(this, { op: 'removeField', fieldName });
   }
 
   newInstance(initialState) {
@@ -102,7 +109,7 @@ function upgradeOrDowngradeDelta(delta, direction, version) {
             console.assert(delta.prop !== migration.fieldName);
           }
         }
-        case 'deleteField': {
+        case 'removeField': {
           if (direction === 'upgrade' && delta.prop === migration.fieldName) {
             return { op: 'no-op', version }
           } else {
