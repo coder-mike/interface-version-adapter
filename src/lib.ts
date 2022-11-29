@@ -6,31 +6,38 @@
 
 const ledgerSymbol = Symbol('ledger');
 
-export class Schema {
-  constructor (prev, migration) {
-    // Schemas are linked together in a doubly-linked list
-    this.prev = prev;
+type SchemaMigration =
+  | { op: 'addField', fieldName: string }
+  | { op: 'renameField', oldName: string, newName: string }
+  | { op: 'removeField', fieldName: string }
 
-    // The "migration" is the action to take on the previous schema that brings
-    // us to this schema.
+export class Schema {
+  // Schemas are linked together in a doubly-linked list
+  prev: Schema;
+  // The "migration" is the action to take on the previous schema that brings
+  // us to this schema.
+  migration: SchemaMigration;
+
+  constructor (prev: Schema, migration: SchemaMigration) {
+    this.prev = prev;
     this.migration = migration;
   }
 
-  addField(fieldName) {
+  addField(fieldName: string) {
     return new Schema(this, { op: 'addField', fieldName });
   }
 
-  renameField(oldName, newName) {
+  renameField(oldName: string, newName: string) {
     return new Schema(this, { op: 'renameField', oldName, newName });
   }
 
-  removeField(fieldName) {
+  removeField(fieldName: string) {
     return new Schema(this, { op: 'removeField', fieldName });
   }
 
-  newInstance(initialState) {
+  newInstance(initialState: any) {
     // A single, mutable ledger, shared between all views
-    const ledger = [];
+    const ledger: Ledger = [];
     const view = viewLedger(ledger, this);
     if (initialState) {
       Object.assign(view, initialState);
@@ -38,7 +45,7 @@ export class Schema {
     return view;
   }
 
-  viewInstance(instance) {
+  viewInstance(instance: any) {
     // Get the underlying ledger used by the instance
     const ledger = instance[ledgerSymbol];
     console.assert(ledger !== undefined);
@@ -47,35 +54,45 @@ export class Schema {
   }
 }
 
-export const emptySchema = new Schema([], undefined);
+export const emptySchema = new Schema(undefined as any, undefined as any);
+
+type Delta =
+  | { op: 'no-op', version: Schema }
+  | { op: 'set', version: Schema, prop: string, value: any }
+
+type Ledger = Delta[];
 
 class Handler {
-  constructor (ledger, version) {
+  ledger: Ledger;
+  version: Schema;
+
+  constructor (ledger: Ledger, version: Schema) {
     this.ledger = ledger;
     this.version = version;
   }
 
-  set(_obj, prop, value) {
+  set(_obj: any, prop: PropertyKey, value: any) {
+    if (typeof prop !== 'string') throw new Error('Cannot set non-string property key')
     const version = this.version;
     this.ledger.push({ version, op: 'set', prop, value });
     return true;
   }
 
-  get(_obj, prop) {
+  get(_obj: any, prop: PropertyKey) {
     if (prop === ledgerSymbol) return this.ledger;
     const state = renderLedgerAsVersion(this.ledger, this.version);
     return state[prop];
   }
 }
 
-function viewLedger(ledger, version) {
+function viewLedger(ledger: Ledger, version: Schema) {
   return new Proxy({}, new Handler(ledger, version));
 }
 
-function renderLedgerAsVersion(ledger, version) {
+function renderLedgerAsVersion(ledger: Ledger, version: Schema) {
   return ledger.reduce(reducer, {});
 
-  function reducer(state, delta) {
+  function reducer(state: any, delta: Delta) {
     // Translate the delta into the version being requested
     delta = translateDelta(delta, version);
     state = applyDelta(state, delta);
@@ -85,7 +102,7 @@ function renderLedgerAsVersion(ledger, version) {
 
 // This takes a delta to an instance in one version and translates it to a delta
 // to an instance in another version in the same lineage.
-function translateDelta(delta, targetVersion) {
+function translateDelta(delta: Delta, targetVersion: Schema): Delta {
   const history = getVersionRelationship(delta.version, targetVersion);
   for (const { version, direction } of history) {
     delta = upgradeOrDowngradeDelta(delta, direction, version)
@@ -96,7 +113,7 @@ function translateDelta(delta, targetVersion) {
 
 // This takes a delta to an instance in one version and translates it to a delta
 // to an instance in another version in the same lineage.
-function upgradeOrDowngradeDelta(delta, direction, version) {
+function upgradeOrDowngradeDelta(delta: Delta, direction: 'downgrade' | 'upgrade', version: Schema): Delta {
   const migration = version.migration;
   switch (delta.op) {
     case 'no-op': break;
@@ -136,7 +153,7 @@ function upgradeOrDowngradeDelta(delta, direction, version) {
   return { ...delta, version };
 }
 
-function applyDelta(instance, delta) {
+function applyDelta(instance: any, delta: Delta): any {
   switch (delta.op) {
     case 'no-op': return instance;
     case 'set': return { ...instance, [delta.prop]: delta.value };
@@ -144,8 +161,10 @@ function applyDelta(instance, delta) {
   }
 }
 
-function getVersionRelationship(sourceVersion, targetVersion) {
-  let history = [];
+type VersionHistory = Array<{ version: Schema, direction: 'upgrade' | 'downgrade' }>;
+
+function getVersionRelationship(sourceVersion: Schema, targetVersion: Schema): VersionHistory {
+  let history: VersionHistory = [];
 
   // If the target version is later, we need to progressively upgrade the version
   if (versionInheritsFrom(targetVersion, sourceVersion)) {
@@ -169,7 +188,7 @@ function getVersionRelationship(sourceVersion, targetVersion) {
   return history;
 }
 
-function versionInheritsFrom(descendantVersion, ancestorVersion) {
+function versionInheritsFrom(descendantVersion: Schema, ancestorVersion: Schema): boolean {
   let version = descendantVersion;
   while (version) {
     if (version === ancestorVersion) return true;

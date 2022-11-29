@@ -28,7 +28,7 @@ console.log(view1.message); // World
 console.log(view2.printout); // World
 ```
 
-The more complete example is in [app.mjs](./app.mjs) and the source of the library is [lib.mjs](./lib.mjs).
+The more complete example is in [example.ts](./src/example.ts) and the source of the library is [lib.ts](./src/lib.ts).
 
 ### Tricky cases
 
@@ -91,6 +91,8 @@ Examples:
   - Custom transforms at the field level and whole-object level
 
   - Modularity and cohesion - thinking more carefully about how schemas can be defined that doesn't require one monolithic sequence of delta statements that couples all the sub-schemas together.
+
+  - A TypeScript type generator would be good.
 
 
 # Problem Statement

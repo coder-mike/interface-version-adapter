@@ -1,0 +1,26 @@
+{
+  "name": "interface-version-adapter",
+  "version": "0.0.1",
+  "description": "Toy library for adapting between different interface versions",
+  "main": "dist/lib.ts",
+  "directories": {
+    "doc": "doc"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/coder-mike/interface-version-adapter.git"
+  },
+  "author": "Michael Hunter",
+  "license": "UNLICENSED",
+  "bugs": {
+    "url": "https://github.com/coder-mike/interface-version-adapter/issues"
+  },
+  "homepage": "https://github.com/coder-mike/interface-version-adapter#readme",
+  "dependencies": {
+    "ts-node": "^10.9.1",
+    "typescript": "^4.9.3"
+  }
+}
