@@ -1,4 +1,4 @@
-import { emptySchema } from './lib'
+import { emptySchema } from './lib.js'
 
 // Let's say that over time, we progress through 3 different versions of our schema
 const version1 = emptySchema.addField('message');

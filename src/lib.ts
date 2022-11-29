@@ -4,6 +4,8 @@
 // Note: in this unit, I've used the term "delta" to refer to a change to an
 // instance, and "migration" to refer to a change to a schema.
 
+import crypto from 'crypto';
+
 const ledgerSymbol = Symbol('ledger');
 
 type SchemaMigration =
@@ -125,6 +127,7 @@ function upgradeOrDowngradeDelta(delta: Delta, direction: 'downgrade' | 'upgrade
           } else {
             console.assert(delta.prop !== migration.fieldName);
           }
+          break;
         }
         case 'removeField': {
           if (direction === 'upgrade' && delta.prop === migration.fieldName) {
@@ -195,4 +198,9 @@ function versionInheritsFrom(descendantVersion: Schema, ancestorVersion: Schema)
     version = version.prev;
   }
   return false;
+}
+
+function sha256Object(value: any): string {
+  const str = JSON.stringify(value);
+  return crypto.createHash('sha256').update(str).digest('hex');
 }

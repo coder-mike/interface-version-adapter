@@ -3,10 +3,13 @@
   "version": "0.0.1",
   "description": "Toy library for adapting between different interface versions",
   "main": "dist/lib.ts",
+  "type": "module",
   "directories": {
     "doc": "doc"
   },
   "scripts": {
+    "start": "node dist/example.js",
+    "build:watch": "tsc --watch --preserveWatchOutput false",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
@@ -19,8 +22,8 @@
     "url": "https://github.com/coder-mike/interface-version-adapter/issues"
   },
   "homepage": "https://github.com/coder-mike/interface-version-adapter#readme",
-  "dependencies": {
-    "ts-node": "^10.9.1",
+  "devDependencies": {
+    "@types/node": "^18.11.9",
     "typescript": "^4.9.3"
   }
 }
